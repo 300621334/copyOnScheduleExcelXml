@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2013 for Windows Desktop
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyAutoSchedule", "CopyAutoSchedule\CopyAutoSchedule.csproj", "{A67F3E66-4833-40D6-AD08-7FAD95BA23F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyAutoSchedule_StartProcess", "CopyAutoSchedule_StartProcess\CopyAutoSchedule_StartProcess.csproj", "{B10AF463-0317-4D32-90E3-0E49ABC80083}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A67F3E66-4833-40D6-AD08-7FAD95BA23F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A67F3E66-4833-40D6-AD08-7FAD95BA23F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A67F3E66-4833-40D6-AD08-7FAD95BA23F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A67F3E66-4833-40D6-AD08-7FAD95BA23F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B10AF463-0317-4D32-90E3-0E49ABC80083}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B10AF463-0317-4D32-90E3-0E49ABC80083}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B10AF463-0317-4D32-90E3-0E49ABC80083}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B10AF463-0317-4D32-90E3-0E49ABC80083}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
