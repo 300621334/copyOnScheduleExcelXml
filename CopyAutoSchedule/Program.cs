@@ -42,8 +42,8 @@ namespace CopyAutoSchedule
             {
          
                 string configFileTxt =
-                "Server FQDN: SE104499.saimaple.saifg.rbc.com" + System.Environment.NewLine
-                + "Database Name:	CentralContact" + System.Environment.NewLine
+                "DB Server FQDN: SE104499.saimaple.saifg.rbc.com" + System.Environment.NewLine
+                //+ "Database Name:	CentralContact" + System.Environment.NewLine
                 + "CallsForHowManyDaysBack: 1" + System.Environment.NewLine
                 + "Destination Folder: Copied_Files" + System.Environment.NewLine
                 + "Want To Copy XML?: no" + System.Environment.NewLine;
@@ -56,7 +56,7 @@ namespace CopyAutoSchedule
                 configTxt = File.ReadAllLines("_config.txt");
                 foreach(string line in configTxt)
                 {
-                    if(Regex.Match(line, "Server FQDN").Success)
+                    if(Regex.Match(line, "DB Server FQDN").Success)
                     {
                         var match = Regex.Match(line, ":");
                         FQDN = line.Substring(match.Index + 1).Trim();
@@ -148,7 +148,7 @@ namespace CopyAutoSchedule
                             xmlDestinFile = newFile.Replace(".wav", ".xml");
                             try
                             {
-                                if (!File.Exists(newFile))
+                                if (!(File.Exists(newFile) && File.Exists(xmlDestinFile)))
                                 {
                                     File.Copy(path, newFile, true);
                                     if (copyXml) File.Copy(xmlOriginFile, xmlDestinFile, true);

@@ -24,6 +24,8 @@ end
 --print @ifMonthChanged
 
 
+
+--if serial#_to_ServerHostName mapping change in future, correct the CASE statement below e.g. (871001 <=> SE104421)
 set @sql = '
 select distinct "Paths" = ''\\''
      +CASE
