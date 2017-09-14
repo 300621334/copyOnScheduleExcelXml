@@ -7,12 +7,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-/*Bugs:
-(1)If folder "Copied_Files" is deleted, I get error like below. Which is not representative of actual problem.
-Could not find a part of the path 'C:\Users\SVYX0SRVOAT\Desktop\Test\_copy_auto_schedule\_testing\Copied_Files\871001000052629.wav'.
-Paths:1, Copied:0, Missing:0
- 
-(2)
+/*NOTEs:
+ * (1) To hide app, r-clk project >> Application >> Output Type >> change from console to Windows_Application.
+ * Aft that console doesn't show up & hence NO need to run the other project "CopyAutoSchedule_StartProcess"
+ * 
  */
 namespace CopyAutoSchedule
 {
