@@ -95,7 +95,7 @@ namespace CopyAutoSchedule
         {
             SqlConnectionStringBuilder csb = new SqlConnectionStringBuilder();
             csb.DataSource = FQDN;
-            csb.InitialCatalog = database;
+            //csb.InitialCatalog = database;
             csb.IntegratedSecurity = true;
             return csb.ConnectionString;
         }
@@ -148,8 +148,11 @@ namespace CopyAutoSchedule
                             xmlDestinFile = newFile.Replace(".wav", ".xml");
                             try
                             {
-                                File.Copy(path, newFile, true);
-                                if (copyXml) File.Copy(xmlOriginFile, xmlDestinFile, true);
+                                if (!File.Exists(newFile))
+                                {
+                                    File.Copy(path, newFile, true);
+                                    if (copyXml) File.Copy(xmlOriginFile, xmlDestinFile, true);
+                                }
                                 counter++;
                             }
                             catch (FileNotFoundException ex)
