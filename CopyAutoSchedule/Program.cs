@@ -7,14 +7,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
+/*Bugs:
+(1)If folder "Copied_Files" is deleted, I get error like below. Which is not representative of actual problem.
+Could not find a part of the path 'C:\Users\SVYX0SRVOAT\Desktop\Test\_copy_auto_schedule\_testing\Copied_Files\871001000052629.wav'.
+Paths:1, Copied:0, Missing:0
+ 
+(2)
+ */
 namespace CopyAutoSchedule
 {
     class Program
     {
         static string pathListFile = "";
         static int linesRead = 0, counter = 0, missingFiles = 0;
-        static string newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = Path.Combine(Application.StartupPath, @"Copied_Files")
+        static string newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
             , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1";
         static string[] configTxt;
         static bool copyXml = true;
@@ -38,7 +44,9 @@ namespace CopyAutoSchedule
                 string configFileTxt =
                 "Server FQDN: SE104499.saimaple.saifg.rbc.com" + System.Environment.NewLine
                 + "Database Name:	CentralContact" + System.Environment.NewLine
-                + "CallsForHowManyDaysBack:	1" + System.Environment.NewLine;
+                + "CallsForHowManyDaysBack: 1" + System.Environment.NewLine
+                + "Destination Folder: Copied_Files" + System.Environment.NewLine
+                + "Want To Copy XML?: no" + System.Environment.NewLine;
 
                 File.WriteAllText("_config.txt", configFileTxt, Encoding.UTF8);
         
@@ -62,6 +70,20 @@ namespace CopyAutoSchedule
                     {
                         var match = Regex.Match(line, ":");
                         CallsForHowManyDaysBack = "-" + line.Substring(match.Index + 1).Trim();  //add minus sign so days get substracted
+                    }
+                    if (Regex.Match(line, "Destination Folder").Success)
+                    {
+                        var match = Regex.Match(line, ":");
+                        folder = line.Substring(match.Index + 1).Trim();
+                        if (!(folder.Substring(0, 2)=="\\\\") && !Directory.Exists(folder))
+                        {
+                            Directory.CreateDirectory(folder);
+                        }
+                    }
+                    if (Regex.Match(line, "Want To Copy XML?").Success)
+                    {
+                        var match = Regex.Match(line, ":");
+                        copyXml = (line.Substring(match.Index + 1).Trim().ToUpper() =="YES")?true:false;  //add minus sign so days get substracted
                     }
                 }
             }
