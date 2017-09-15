@@ -18,8 +18,8 @@ namespace CopyAutoSchedule
     {
         #region Variables
         static string pathListFile = "";
-        static int linesRead = 0, counter = 0, missingFiles = 0;
-        static string newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
+        static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1;
+        static string logFile="Logs.txt", newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
             , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1";
         static string[] configTxt;
         static bool copyXml = true;
@@ -28,6 +28,7 @@ namespace CopyAutoSchedule
         static void Main(string[] args)
         {
             configFile();
+            trimLogFile();
             sqlFileCreate();
             string sqlFilePath = Path.Combine(Application.StartupPath, @"sql.sql");
             string sql = File.ReadAllText(sqlFilePath );
@@ -36,7 +37,7 @@ namespace CopyAutoSchedule
             getPathsIntoFile(sql, connStr);
             startCopy();
         }
-       
+               
         private static void configFile()
         {
             if(!File.Exists("_config.txt"))
@@ -47,7 +48,8 @@ namespace CopyAutoSchedule
                 //+ "Database Name:	CentralContact" + System.Environment.NewLine
                 + "CallsForHowManyDaysBack: 1" + System.Environment.NewLine
                 + "Destination Folder: Copied_Files" + System.Environment.NewLine
-                + "Want To Copy XML?: no" + System.Environment.NewLine;
+                + "Want To Copy XML?: no" + System.Environment.NewLine
+                + "Max Log Size (KB): 1000" + System.Environment.NewLine;
 
                 File.WriteAllText("_config.txt", configFileTxt, Encoding.UTF8);
                 Environment.Exit(0);//close app aft creating config.txt template
@@ -86,9 +88,44 @@ namespace CopyAutoSchedule
                         var match = Regex.Match(line, "[:;]");
                         copyXml = (line.Substring(match.Index + 1).Trim().ToUpper() =="YES")?true:false;  //add minus sign so days get substracted
                     }
+                    if (Regex.Match(line, "Max Log Size (KB)").Success)
+                    {
+                        var match = Regex.Match(line, "[:;]");
+                        maxLogSizeInKBs = Convert.ToInt32(line.Substring(match.Index + 1).Trim());
+                    }
                 }
             }
 
+        }
+
+        private static void trimLogFile()
+        {//https://stackoverflow.com/questions/1515097/how-do-i-delete-the-first-x-lines-of-a-text-file  //https://stackoverflow.com/questions/1380839/how-do-you-get-the-file-size-in-c
+            
+            if (File.Exists(logFile))
+            {
+                long logFileSizeInBytes = new FileInfo(logFile).Length;
+                if(true/*logFileSizeInBytes > (1000 * maxLogSizeInKBs)*/)
+                {
+                    long linesToDelete = (logFileSizeInBytes/100);//assuming ea line is ~50bytes on average, so delete half of all lines = 50*2=100
+                    string line = null;
+                    string tempLogFile = "tempLogs.txt"; //= Path.GetTempFileName();//this creates a temp file in User\...\AppData\Local\Temp\tempfile.tmp
+                    
+                    using (StreamReader reader = new StreamReader(logFile))
+                    using(StreamWriter writer = new StreamWriter(tempLogFile))
+                    {
+                        while (linesToDelete-- > 0) line = reader.ReadLine();//don't do anything to first few lines so they get lost
+                        while ((line = reader.ReadLine()) != null) writer.WriteLine(line);//write remaining lines to tempLogFile
+                    }
+                    
+                    //replace original larger file with new smaller log file
+                    if(File.Exists(tempLogFile))
+                    {
+                        File.Delete(logFile);
+                        File.Move(tempLogFile, logFile);
+                    }
+
+                }
+            }
         }
 
         private static void sqlFileCreate()
@@ -217,7 +254,7 @@ namespace CopyAutoSchedule
             catch (Exception e)
             {
                 //Console.WriteLine(e.Message);
-                File.AppendAllText("Logs.txt", "[" + DateTime.Now +"] "+ e.Message + Environment.NewLine);
+                File.AppendAllText(logFile, "[" + DateTime.Now +"] "+ e.Message + Environment.NewLine);
             }
         }
 
@@ -262,10 +299,10 @@ namespace CopyAutoSchedule
             }
             catch(Exception e)
             {
-                File.AppendAllText("Logs.txt", "[" + DateTime.Now + "] " + e.Message + Environment.NewLine);
+                File.AppendAllText(logFile, "[" + DateTime.Now + "] " + e.Message + Environment.NewLine);
             }
 
-            File.AppendAllText("Logs.txt", "[" + DateTime.Now + "] Paths:" + linesRead + ", Copied:"+counter + ", Missing:" + missingFiles + Environment.NewLine);
+            File.AppendAllText(logFile, "[" + DateTime.Now + "] Paths:" + linesRead + ", Copied:"+counter + ", Missing:" + missingFiles + Environment.NewLine);
         }
 
     }
