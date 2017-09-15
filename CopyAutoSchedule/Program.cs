@@ -20,7 +20,7 @@ namespace CopyAutoSchedule
         static string pathListFile = "";
         static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1;
         static string logFile="Logs.txt", newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
-            , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1";
+            , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", How Many Days of Calls? = "-1";
         static string[] configTxt;
         static bool copyXml = true;
         #endregion
@@ -46,7 +46,7 @@ namespace CopyAutoSchedule
                 string configFileTxt =
                 "DB Server FQDN: SE104499.saimaple.saifg.rbc.com" + System.Environment.NewLine
                 //+ "Database Name:	CentralContact" + System.Environment.NewLine
-                + "CallsForHowManyDaysBack: 1" + System.Environment.NewLine
+                + "How Many Days of Calls?: 1" + System.Environment.NewLine
                 + "Destination Folder: Copied_Files" + System.Environment.NewLine
                 + "Want To Copy XML?: no" + System.Environment.NewLine
                 + "Max Log Size (KB): 1000" + System.Environment.NewLine;
@@ -69,10 +69,10 @@ namespace CopyAutoSchedule
                     //    var match = Regex.Match(line, "[:;]");
                     //    database = line.Substring(match.Index + 1).Trim();
                     //}
-                    if (Regex.Match(line, "CallsForHowManyDaysBack").Success)
+                    if (Regex.Match(line, "How Many Days of Calls?").Success)
                     {
                         var match = Regex.Match(line, "[:;]");
-                        CallsForHowManyDaysBack = "-" + line.Substring(match.Index + 1).Trim();  //add minus sign so days get substracted
+                        How Many Days of Calls? = "-" + line.Substring(match.Index + 1).Trim();  //add minus sign so days get substracted
                     }
                     if (Regex.Match(line, "Destination Folder").Success)
                     {
@@ -104,7 +104,7 @@ namespace CopyAutoSchedule
             if (File.Exists(logFile))
             {
                 long logFileSizeInBytes = new FileInfo(logFile).Length;
-                if(true/*logFileSizeInBytes > (1000 * maxLogSizeInKBs)*/)
+                if(logFileSizeInBytes > (1000 * maxLogSizeInKBs))
                 {
                     long linesToDelete = (logFileSizeInBytes/100);//assuming ea line is ~50bytes on average, so delete half of all lines = 50*2=100
                     string line = null;
@@ -145,14 +145,14 @@ namespace CopyAutoSchedule
   
  +@"set @currentMo = DATEPART(M, GETDATE());"+Environment.NewLine
   
- +@"set @oneDayAgo = convert(nvarchar , DATEADD(DAY, convert(int, @CallsForHowManyDaysBack), GETDATE()) , 25) --format 25 is '2017-01-01 00:00:00:000'"+Environment.NewLine
+ +@"set @oneDayAgo = convert(nvarchar , DATEADD(DAY, convert(int, @How Many Days of Calls?), GETDATE()) , 25) --format 25 is '2017-01-01 00:00:00:000'"+Environment.NewLine
   
   
  +@"set @ifMonthChanged ="+Environment.NewLine
  +@"case"+Environment.NewLine
- +@"	when month(DATEADD(DAY, convert(int, @CallsForHowManyDaysBack) , GETDATE())) = month(GETDATE())"+Environment.NewLine
+ +@"	when month(DATEADD(DAY, convert(int, @How Many Days of Calls?) , GETDATE())) = month(GETDATE())"+Environment.NewLine
  +@"	then ' '"+Environment.NewLine
- +@"	else ' union all  select * from dbo.sessions_month_' + cast(month(DATEADD(DAY, convert(int, @CallsForHowManyDaysBack) , GETDATE())) as nvarchar)"+Environment.NewLine
+ +@"	else ' union all  select * from dbo.sessions_month_' + cast(month(DATEADD(DAY, convert(int, @How Many Days of Calls?) , GETDATE())) as nvarchar)"+Environment.NewLine
  +@"end"+Environment.NewLine
   
  +@"--print @currentMo"+Environment.NewLine
@@ -233,7 +233,7 @@ namespace CopyAutoSchedule
         {
             SqlConnection con = new SqlConnection(connStr);
             SqlCommand cmd = new SqlCommand(sql, con);
-            cmd.Parameters.AddWithValue("@CallsForHowManyDaysBack", CallsForHowManyDaysBack);
+            cmd.Parameters.AddWithValue("@How Many Days of Calls?", How Many Days of Calls?);
 
             SqlDataReader reader;
             List<string> pathsList = new List<string>();
