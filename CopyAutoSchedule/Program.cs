@@ -74,7 +74,9 @@ namespace CopyAutoSchedule
                     if (Regex.Match(line, "CallsForHowManyDaysBack").Success)
                     {
                         var match = Regex.Match(line, "[:;]");
-                        CallsForHowManyDaysBack = "-" + line.Substring(match.Index + 1).Trim();  //add minus sign so days get substracted
+                        string daysSelected = line.Substring(match.Index + 1).Trim();
+
+                        CallsForHowManyDaysBack = "-" + freezeDaysToLastMoStart(daysSelected);  //add minus sign so days get substracted
                     }
                     if (Regex.Match(line, "Destination Folder").Success)
                     {
@@ -103,6 +105,11 @@ namespace CopyAutoSchedule
                 }
             }
 
+        }
+
+        private static string freezeDaysToLastMoStart(string daysSelected)
+        {
+            return daysSelected;
         }
 
         private static void trimLogFile()
