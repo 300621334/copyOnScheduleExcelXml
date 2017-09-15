@@ -36,7 +36,6 @@ namespace CopyAutoSchedule
             getPathsIntoFile(sql, connStr);
             startCopy();
         }
-
        
         private static void configFile()
         {
@@ -51,7 +50,7 @@ namespace CopyAutoSchedule
                 + "Want To Copy XML?: no" + System.Environment.NewLine;
 
                 File.WriteAllText("_config.txt", configFileTxt, Encoding.UTF8);
-        
+                Environment.Exit(0);//close app aft creating config.txt template
             }
             else
             {
@@ -217,7 +216,7 @@ namespace CopyAutoSchedule
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                //Console.WriteLine(e.Message);
                 File.AppendAllText("Logs.txt", "[" + DateTime.Now +"] "+ e.Message + Environment.NewLine);
             }
         }
