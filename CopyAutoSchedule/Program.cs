@@ -18,7 +18,7 @@ namespace CopyAutoSchedule
     {
         #region Variables
         static string pathListFile = "";
-        static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1;
+        static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1, keepCallListsForDays = 7;
         static string logFile="Logs.txt", newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
             , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1";
         static string[] configTxt;
@@ -29,6 +29,7 @@ namespace CopyAutoSchedule
         {
             configFile();
             trimLogFile();
+            deletePathLists();
             sqlFileCreate();
             string sqlFilePath = Path.Combine(Application.StartupPath, @"sql.sql");
             string sql = File.ReadAllText(sqlFilePath );
@@ -37,7 +38,7 @@ namespace CopyAutoSchedule
             getPathsIntoFile(sql, connStr);
             startCopy();
         }
-               
+
         private static void configFile()
         {
             if(!File.Exists("_config.txt"))
@@ -49,7 +50,8 @@ namespace CopyAutoSchedule
                 + "CallsForHowManyDaysBack: 1" + System.Environment.NewLine
                 + "Destination Folder: Copied_Files" + System.Environment.NewLine
                 + "Want To Copy XML?: no" + System.Environment.NewLine
-                + "Max Log Size (KB): 1000" + System.Environment.NewLine;
+                + "Max Log Size (KB): 1000" + System.Environment.NewLine
+                + "Keep pathsLists For Days: 7" + System.Environment.NewLine;
 
                 File.WriteAllText("_config.txt", configFileTxt, Encoding.UTF8);
                 Environment.Exit(0);//close app aft creating config.txt template
@@ -93,6 +95,11 @@ namespace CopyAutoSchedule
                         var match = Regex.Match(line, "[:;]");
                         maxLogSizeInKBs = Convert.ToInt32(line.Substring(match.Index + 1).Trim());
                     }
+                    if (Regex.Match(line, "Keep pathsLists For Days").Success)
+                    {
+                        var match = Regex.Match(line, "[:;]");
+                        keepCallListsForDays = Convert.ToInt32( "-" + line.Substring(match.Index + 1).Trim() );
+                    }
                 }
             }
 
@@ -128,6 +135,16 @@ namespace CopyAutoSchedule
             }
         }
 
+        private static void deletePathLists()
+        {
+            DateTime keepListsTillDate = DateTime.Now.AddDays(keepCallListsForDays);//.AddMinutes(-1);
+            string[] pathsListArr = Directory.GetFiles(Directory.GetCurrentDirectory(), "pathsList *.txt");//al files like "pathsList 13-Sep-2017.txt"
+            foreach (string pathsList in pathsListArr.Where(x => File.GetCreationTime(x)/*File.GetLastWriteTime(x)*/ < keepListsTillDate))
+            {
+                File.Delete(pathsList);
+            }
+        }
+
         private static void sqlFileCreate()
         {
             if(!File.Exists("sql.sql"))
@@ -140,19 +157,19 @@ namespace CopyAutoSchedule
   
  +@"Use CentralContact;"+Environment.NewLine
  +@"SET NOCOUNT ON;"+Environment.NewLine
+
+ + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max);" + Environment.NewLine
+ + @"set @now = GETDATE();" + Environment.NewLine
+ +@"set @currentMo = DATEPART(M, @now);"+Environment.NewLine
   
- +@"declare @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max);"+Environment.NewLine
-  
- +@"set @currentMo = DATEPART(M, GETDATE());"+Environment.NewLine
-  
- +@"set @oneDayAgo = convert(nvarchar , DATEADD(DAY, convert(int, @CallsForHowManyDaysBack), GETDATE()) , 25) --format 25 is '2017-01-01 00:00:00:000'"+Environment.NewLine
+ +@"set @oneDayAgo = convert(nvarchar , DATEADD(DAY, convert(int, @CallsForHowManyDaysBack), @now) , 25) --format 25 is '2017-01-01 00:00:00:000'"+Environment.NewLine
   
   
  +@"set @ifMonthChanged ="+Environment.NewLine
  +@"case"+Environment.NewLine
- +@"	when month(DATEADD(DAY, convert(int, @CallsForHowManyDaysBack) , GETDATE())) = month(GETDATE())"+Environment.NewLine
+ +@"	when month(DATEADD(DAY, convert(int, @CallsForHowManyDaysBack) , @now)) = month(@now)"+Environment.NewLine
  +@"	then ' '"+Environment.NewLine
- +@"	else ' union all  select * from dbo.sessions_month_' + cast(month(DATEADD(DAY, convert(int, @CallsForHowManyDaysBack) , GETDATE())) as nvarchar)"+Environment.NewLine
+ +@"	else ' union all  select * from dbo.sessions_month_' + cast(month(DATEADD(DAY, convert(int, @CallsForHowManyDaysBack) , @now)) as nvarchar)"+Environment.NewLine
  +@"end"+Environment.NewLine
   
  +@"--print @currentMo"+Environment.NewLine
