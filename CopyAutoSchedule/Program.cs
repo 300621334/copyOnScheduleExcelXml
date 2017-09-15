@@ -59,22 +59,22 @@ namespace CopyAutoSchedule
                 {
                     if(Regex.Match(line, "DB Server FQDN").Success)
                     {
-                        var match = Regex.Match(line, ":");
+                        var match = Regex.Match(line, "[:;]");
                         FQDN = line.Substring(match.Index + 1).Trim();
                     }
-                    if (Regex.Match(line, "Database Name").Success)
-                    {
-                        var match = Regex.Match(line, ":");
-                        database = line.Substring(match.Index + 1).Trim();
-                    }
+                    //if (Regex.Match(line, "Database Name").Success)
+                    //{
+                    //    var match = Regex.Match(line, "[:;]");
+                    //    database = line.Substring(match.Index + 1).Trim();
+                    //}
                     if (Regex.Match(line, "CallsForHowManyDaysBack").Success)
                     {
-                        var match = Regex.Match(line, ":");
+                        var match = Regex.Match(line, "[:;]");
                         CallsForHowManyDaysBack = "-" + line.Substring(match.Index + 1).Trim();  //add minus sign so days get substracted
                     }
                     if (Regex.Match(line, "Destination Folder").Success)
                     {
-                        var match = Regex.Match(line, ":");
+                        var match = Regex.Match(line, "[:;]");
                         folder = line.Substring(match.Index + 1).Trim();
                         if (!(folder.Substring(0, 2)=="\\\\") && !Directory.Exists(folder))
                         {
@@ -83,7 +83,7 @@ namespace CopyAutoSchedule
                     }
                     if (Regex.Match(line, "Want To Copy XML?").Success)
                     {
-                        var match = Regex.Match(line, ":");
+                        var match = Regex.Match(line, "[:;]");
                         copyXml = (line.Substring(match.Index + 1).Trim().ToUpper() =="YES")?true:false;  //add minus sign so days get substracted
                     }
                 }
@@ -99,7 +99,7 @@ namespace CopyAutoSchedule
  string sqlQuery = 
  "--Cannot declare a @var and assign tbl name to it then use that @var in FROM clause"+Environment.NewLine
  +@"--must have WHOLE query as a string and assign to a var, then EXEC(@var); brackets must"+Environment.NewLine
- +@Environment.NewLine
+ +Environment.NewLine
   
  +@"Use CentralContact;"+Environment.NewLine
  +@"SET NOCOUNT ON;"+Environment.NewLine
@@ -240,12 +240,12 @@ namespace CopyAutoSchedule
                             xmlDestinFile = newFile.Replace(".wav", ".xml");
                             try
                             {
-                                if (!(File.Exists(newFile) && File.Exists(xmlDestinFile)))
+                                if (!File.Exists(newFile)) //if BOTH .wav & .xml already there in destination folder 
                                 {
                                     File.Copy(path, newFile, true);
-                                    if (copyXml) File.Copy(xmlOriginFile, xmlDestinFile, true);
+                                    counter++;
                                 }
-                                counter++;
+                                if (copyXml && !File.Exists(xmlDestinFile)) File.Copy(xmlOriginFile, xmlDestinFile, true);
                             }
                             catch (FileNotFoundException ex)
                             {
