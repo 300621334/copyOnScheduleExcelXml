@@ -108,7 +108,16 @@ namespace CopyAutoSchedule
         }
 
         private static string freezeDaysToLastMoStart(string daysSelected)
-        {
+        {//https://stackoverflow.com/questions/591752/get-the-previous-months-first-and-last-day-dates-in-c-sharp
+
+            DateTime LastMonthLastDate = DateTime.Today.AddDays(0 - DateTime.Today.Day);
+            DateTime LastMonthFirstDate = LastMonthLastDate.AddDays(1 - LastMonthLastDate.Day);
+
+            if (DateTime.Today.AddDays(Convert.ToInt32("-" + daysSelected)) < LastMonthFirstDate)
+            {
+                daysSelected = (DateTime.Today.Day + (LastMonthLastDate.Day - LastMonthFirstDate.Day)).ToString();
+                return daysSelected; //SQL replace value of daysSelected to chk if freezes at lastMoStart or not [[select convert(nvarchar , DATEADD(DAY, -45 , GETDATE()) , 25)]]
+            }
             return daysSelected;
         }
 
