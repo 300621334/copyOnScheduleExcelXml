@@ -138,7 +138,7 @@ namespace CopyAutoSchedule
             //}
             //return daysSelected;
 
-            return Convert.ToInt32(daysSelected) > 7 ? "7" : daysSelected ;
+            return Convert.ToInt32(daysSelected) > 62 ? "62" : daysSelected ;//in production change this to ~7 etc
         }
 
         private static void trimLogFile()
@@ -189,11 +189,11 @@ namespace CopyAutoSchedule
             //if at least one instance_id is specified, then add following to SQL query
             if (instanceIdsList.Any())//if list of instance_id is NOT empty, add more to SQL
             {
-                sqlJOINforInstances = "JOIN [CentralDWH].[dbo].[Sessions_categories] sc on sc.sid=sm3.sid" + Environment.NewLine
-                    + "JOIN [CentralDWH].[dbo].[Categories] cat ON sc.category_id=cat.category_id";
+                sqlJOINforInstances = "JOIN [CentralDWH].[dbo].[Sessions_categories] sc on sc.sid=sm3.sid " //+ Environment.NewLine
+                    + " JOIN [CentralDWH].[dbo].[Categories] cat ON sc.category_id=cat.category_id";
 
-                sqlWHEREforInstances = "AND sc.instance_id IN (871102, 871100)" + Environment.NewLine
-                    + "AND cat.category_name LIKE  ''%" + categoryName + "%''";
+                sqlWHEREforInstances = "AND sc.instance_id IN (" + string.Join(",", instanceIdsList) + ")" //+ Environment.NewLine //https://stackoverflow.com/questions/799446/creating-a-comma-separated-list-from-iliststring-or-ienumerablestring
+                    + " AND cat.category_name LIKE  '%" + categoryName + "%'";
             }
             #endregion
 
@@ -209,9 +209,13 @@ namespace CopyAutoSchedule
  +@"Use CentralContact;"+Environment.NewLine
  +@"SET NOCOUNT ON;"+Environment.NewLine
 
- + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max);" + Environment.NewLine
+ + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max), @sqlJOINforInstances_var nvarchar(max), @sqlWHEREforInstances_var nvarchar(max) ;" + Environment.NewLine
  + @"set @now = GETDATE();" + Environment.NewLine
  +@"set @currentMo = DATEPART(M, @now);"+Environment.NewLine
+
+  + @"set @sqlJOINforInstances_var = @sqlJOINforInstances;" + Environment.NewLine
+ + @"set @sqlWHEREforInstances_var = @sqlWHEREforInstances;" + Environment.NewLine
+
   
  +@"set @oneDayAgo = convert(nvarchar , DATEADD(DAY, convert(int, @CallsForHowManyDaysBack), @now) , 25) --format 25 is '2017-01-01 00:00:00:000'"+Environment.NewLine
   
@@ -276,13 +280,11 @@ namespace CopyAutoSchedule
   
   
  +@"from (select * from dbo.Sessions_month_'+@currentMo+@ifMonthChanged+') sm3"+Environment.NewLine
- + "@sqlJOINforInstances" + Environment.NewLine
+ + "'+@sqlJOINforInstances_var+'" + Environment.NewLine
 
 
  + @"where sm3.start_time > '''+@oneDayAgo+'''" + Environment.NewLine
- + "@sqlWHEREforInstances" + Environment.NewLine
-
- + "';" + Environment.NewLine
+ + "'+@sqlWHEREforInstances_var + ';'" + Environment.NewLine
   
  +@"exec (@sql);"+Environment.NewLine;
 #endregion
