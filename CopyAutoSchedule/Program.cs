@@ -276,11 +276,11 @@ namespace CopyAutoSchedule
   
   
  +@"from (select * from dbo.Sessions_month_'+@currentMo+@ifMonthChanged+') sm3"+Environment.NewLine
- + sqlJOINforInstances + Environment.NewLine
+ + "@sqlJOINforInstances" + Environment.NewLine
 
 
  + @"where sm3.start_time > '''+@oneDayAgo+'''" + Environment.NewLine
- + sqlWHEREforInstances + Environment.NewLine
+ + "@sqlWHEREforInstances" + Environment.NewLine
 
  + "';" + Environment.NewLine
   
@@ -305,6 +305,8 @@ namespace CopyAutoSchedule
             SqlConnection con = new SqlConnection(connStr);
             SqlCommand cmd = new SqlCommand(sql, con);
             cmd.Parameters.AddWithValue("@CallsForHowManyDaysBack", CallsForHowManyDaysBack);
+            cmd.Parameters.AddWithValue("@sqlJOINforInstances", sqlJOINforInstances);
+            cmd.Parameters.AddWithValue("@sqlWHEREforInstances",sqlWHEREforInstances);
 
             SqlDataReader reader;
             List<string> pathsList = new List<string>();
