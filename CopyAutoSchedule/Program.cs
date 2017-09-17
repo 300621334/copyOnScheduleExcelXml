@@ -20,9 +20,11 @@ namespace CopyAutoSchedule
         static string pathListFile = "";
         static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1, keepCallListsForDays = 7;
         static string logFile="Logs.txt", newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
-            , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1";
+            , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1", categoryName="",
+            sqlJOINforInstances="", sqlWHEREforInstances="";
         static string[] configTxt;
         static bool copyXml = true;
+        static List<int> instanceIdsList = new List<int>();
         #endregion
 
         static void Main(string[] args)
@@ -51,7 +53,9 @@ namespace CopyAutoSchedule
                 + "Destination Folder: Copied_Files" + System.Environment.NewLine
                 + "Want To Copy XML?: no" + System.Environment.NewLine
                 + "Max Log Size (KB): 1000" + System.Environment.NewLine
-                + "Keep pathsLists For Days: 7" + System.Environment.NewLine;
+                + "Keep pathsLists For Days: 7" + System.Environment.NewLine
+                + "instance_id comma separated list: 871102,871100" + System.Environment.NewLine
+                + "category_name must contain: credit" + System.Environment.NewLine;
 
                 File.WriteAllText("_config.txt", configFileTxt, Encoding.UTF8);
                 Environment.Exit(0);//close app aft creating config.txt template
@@ -101,6 +105,20 @@ namespace CopyAutoSchedule
                     {
                         var match = Regex.Match(line, "[:;]");
                         keepCallListsForDays = Convert.ToInt32( "-" + line.Substring(match.Index + 1).Trim() );
+                    }
+                    if (Regex.Match(line, "instance_id comma separated list").Success)
+                    {
+                        var match = Regex.Match(line, "[:;]");
+                        foreach(string instance in line.Substring(match.Index + 1).Trim().Split(',').Where(a => !string.IsNullOrWhiteSpace(a.Trim())))
+                        {
+                            instanceIdsList.Add(Convert.ToInt32(instance) );
+                        }
+                        
+                    }
+                    if (Regex.Match(line, "category_name must contain").Success)
+                    {
+                        var match = Regex.Match(line, "[:;]");
+                         categoryName = line.Substring(match.Index + 1).Trim();
                     }
                 }
             }
@@ -165,6 +183,21 @@ namespace CopyAutoSchedule
 
         private static void sqlFileCreate()
         {
+            #region SQL for instance_id added
+            //if only transcribed calls needed, then MUST specify instance_id(s) and optionallt a category_name
+            //otherwise ALL calls will be copied, whether transcribed or not
+            //if at least one instance_id is specified, then add following to SQL query
+            if (instanceIdsList.Any())//if list of instance_id is NOT empty, add more to SQL
+            {
+                sqlJOINforInstances = "JOIN [CentralDWH].[dbo].[Sessions_categories] sc on sc.sid=sm3.sid" + Environment.NewLine
+                    + "JOIN [CentralDWH].[dbo].[Categories] cat ON sc.category_id=cat.category_id";
+
+                sqlWHEREforInstances = "AND sc.instance_id IN (871102, 871100)" + Environment.NewLine
+                    + "AND cat.category_name LIKE  ''%" + categoryName + "%''";
+            }
+            #endregion
+
+            //if sql.sql does NOT xists, generate one as a template
             if(!File.Exists("sql.sql"))
             {
 #region SQL Query
@@ -243,10 +276,13 @@ namespace CopyAutoSchedule
   
   
  +@"from (select * from dbo.Sessions_month_'+@currentMo+@ifMonthChanged+') sm3"+Environment.NewLine
-  
-  
-  
- +@"where sm3.start_time > '''+@oneDayAgo+'''';"+Environment.NewLine
+ + sqlJOINforInstances + Environment.NewLine
+
+
+ + @"where sm3.start_time > '''+@oneDayAgo+'''" + Environment.NewLine
+ + sqlWHEREforInstances + Environment.NewLine
+
+ + "';" + Environment.NewLine
   
  +@"exec (@sql);"+Environment.NewLine;
 #endregion
