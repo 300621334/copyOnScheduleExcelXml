@@ -11,6 +11,7 @@ using System.Windows.Forms;
  * (1) To hide app, r-clk project >> Application >> Output Type >> change from console to Windows_Application.
  * Aft that console doesn't show up & hence NO need to run the other project "CopyAutoSchedule_StartProcess"
  * 
+ * (2)Write to an Excel file: http://csharp.net-informations.com/excel/csharp-create-excel.htm
  */
 namespace CopyAutoSchedule
 {
@@ -21,7 +22,7 @@ namespace CopyAutoSchedule
         static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1, keepCallListsForDays = 7;
         static string logFile="Logs.txt", newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
             , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1", categoryName="",
-            sqlJOINforInstances="", sqlWHEREforInstances="";
+            sqlForExcelMetaData="", sqlJOINforInstances = "", sqlWHEREforInstances = "";
         static string[] configTxt;
         static bool copyXml = true;
         static List<int> instanceIdsList = new List<int>();
@@ -138,7 +139,7 @@ namespace CopyAutoSchedule
             //}
             //return daysSelected;
 
-            return Convert.ToInt32(daysSelected) > 62 ? "62" : daysSelected ;//in production change this to ~7 etc
+            return Convert.ToInt32(daysSelected) > 29 ? "29" : daysSelected ;//in production change this to ~7 etc
         }
 
         private static void trimLogFile()
@@ -189,6 +190,8 @@ namespace CopyAutoSchedule
             //if at least one instance_id is specified, then add following to SQL query
             if (instanceIdsList.Any())//if list of instance_id is NOT empty, add more to SQL
             {
+                sqlForExcelMetaData = ", sm3.p6_value AS [CONNID] , sm3.local_start_time AS [Local Start Time], sm3.local_end_time [Local End Time], sm3.PBX_id, sm3.p2_value AS SRF, cat.category_name";
+
                 sqlJOINforInstances = "JOIN [CentralDWH].[dbo].[Sessions_categories] sc on sc.sid=sm3.sid " //+ Environment.NewLine
                     + " JOIN [CentralDWH].[dbo].[Categories] cat ON sc.category_id=cat.category_id";
 
@@ -206,14 +209,17 @@ namespace CopyAutoSchedule
  +@"--must have WHOLE query as a string and assign to a var, then EXEC(@var); brackets must"+Environment.NewLine
  +Environment.NewLine
   
- +@"Use CentralContact;"+Environment.NewLine
+ +@"Use CentralDWH;"+Environment.NewLine
  +@"SET NOCOUNT ON;"+Environment.NewLine
 
- + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max), @sqlJOINforInstances_var nvarchar(max), @sqlWHEREforInstances_var nvarchar(max) ;" + Environment.NewLine
+ + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max), @sqlForExcelMetaData_var nvarchar(max), @sqlJOINforInstances_var nvarchar(max), @sqlWHEREforInstances_var nvarchar(max) ;" + Environment.NewLine
+ 
+ + @"--declare @CallsForHowManyDaysBack nvarchar(3) = -45; --if run sql directly in SSMS then use this" + Environment.NewLine
  + @"set @now = GETDATE();" + Environment.NewLine
  +@"set @currentMo = DATEPART(M, @now);"+Environment.NewLine
 
-  + @"set @sqlJOINforInstances_var = @sqlJOINforInstances;" + Environment.NewLine
+ + @"set @sqlForExcelMetaData_var = @sqlForExcelMetaData;" + Environment.NewLine
+ + @"set @sqlJOINforInstances_var = @sqlJOINforInstances;" + Environment.NewLine
  + @"set @sqlWHEREforInstances_var = @sqlWHEREforInstances;" + Environment.NewLine
 
   
@@ -235,50 +241,57 @@ namespace CopyAutoSchedule
  +@"--if serial#_to_ServerHostName mapping change in future, correct the CASE statement below e.g. (871001 <=> SE104421)"+Environment.NewLine
  +@"--For production replace CASE statement with following:"+Environment.NewLine
  +@"/*+CASE"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471002 THEN 'se441600\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471001 THEN 'se441601\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471003 THEN 'se441602\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471004 THEN 'se441603\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471005 THEN 'se441604\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471006 THEN 'se441605\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471007 THEN 'se441606\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471008 THEN 'se441607\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471009 THEN 'se441608\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471010 THEN 'se441902\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471011 THEN 'se441903\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471012 THEN 'se441904\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471013 THEN 'se441905\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471014 THEN 'se441906\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471015 THEN 'se441907\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471016 THEN 'se441908\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471017 THEN 'se441909\h$\Calls\'"+Environment.NewLine
- +@"	  WHEN sm3.audio_module_no = 471018 THEN 'se441910\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471002 THEN 'se441600\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471001 THEN 'se441601\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471003 THEN 'se441602\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471004 THEN 'se441603\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471005 THEN 'se441604\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471006 THEN 'se441605\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471007 THEN 'se441606\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471008 THEN 'se441607\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471009 THEN 'se441608\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471010 THEN 'se441902\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471011 THEN 'se441903\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471012 THEN 'se441904\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471013 THEN 'se441905\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471014 THEN 'se441906\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471015 THEN 'se441907\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471016 THEN 'se441908\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471017 THEN 'se441909\h$\Calls\'"+Environment.NewLine
+ +@"	  WHEN sm3.unit_num = 471018 THEN 'se441910\h$\Calls\'"+Environment.NewLine
  +@"	  END*/"+Environment.NewLine
   
   
  +@"set @sql = '"+Environment.NewLine
  +@"select distinct [Paths] = ''\\''"+Environment.NewLine
  +@"     +CASE"+Environment.NewLine
- +@"          WHEN sm3.audio_module_no = 871001 THEN ''SE104421\h$\Calls\''"+Environment.NewLine
- +@"          WHEN sm3.audio_module_no = 871002 THEN ''SE104422\h$\Calls\''"+Environment.NewLine
- +@"          WHEN sm3.audio_module_no = 871003 THEN ''SE104426\h$\Calls\''"+Environment.NewLine
- +@"          WHEN sm3.audio_module_no = 871004 THEN ''SE104427\h$\Calls\''"+Environment.NewLine
+ +@"          WHEN sm3.unit_num = 871001 THEN ''SE104421\h$\Calls\''"+Environment.NewLine
+ +@"          WHEN sm3.unit_num = 871002 THEN ''SE104422\h$\Calls\''"+Environment.NewLine
+ +@"          WHEN sm3.unit_num = 871003 THEN ''SE104426\h$\Calls\''"+Environment.NewLine
+ +@"          WHEN sm3.unit_num = 871004 THEN ''SE104427\h$\Calls\''"+Environment.NewLine
  +@"          END+"+Environment.NewLine
   
- +@"        CAST(sm3.audio_module_no AS nvarchar)"+Environment.NewLine
+ +@"        CAST(sm3.unit_num AS nvarchar)"+Environment.NewLine
  +@"        + ''\''"+Environment.NewLine
- +@"        +SUBSTRING(REPLICATE(''0'', 9-LEN(sm3.audio_ch_no))+ CAST(sm3.audio_ch_no AS varchar) ,1, 3)"+Environment.NewLine
+ +@"        +SUBSTRING(REPLICATE(''0'', 9-LEN(sm3.channel_num))+ CAST(sm3.channel_num AS varchar) ,1, 3)"+Environment.NewLine
  +@"        + ''\''"+Environment.NewLine
- +@"        +SUBSTRING(REPLICATE(''0'', 9-LEN(sm3.audio_ch_no))+ CAST(sm3.audio_ch_no AS varchar) ,4, 2)"+Environment.NewLine
+ +@"        +SUBSTRING(REPLICATE(''0'', 9-LEN(sm3.channel_num))+ CAST(sm3.channel_num AS varchar) ,4, 2)"+Environment.NewLine
  +@"        + ''\''"+Environment.NewLine
- +@"        +SUBSTRING(REPLICATE(''0'', 9-LEN(sm3.audio_ch_no))+ CAST(sm3.audio_ch_no AS varchar) ,6, 2)"+Environment.NewLine
+ +@"        +SUBSTRING(REPLICATE(''0'', 9-LEN(sm3.channel_num))+ CAST(sm3.channel_num AS varchar) ,6, 2)"+Environment.NewLine
  +@"        + ''\''"+Environment.NewLine
- +@"        + CAST(sm3.audio_module_no AS nvarchar) +REPLICATE(''0'', 9-LEN(sm3.audio_ch_no))+ CAST(sm3.audio_ch_no AS varchar)"+Environment.NewLine
+ +@"        + CAST(sm3.unit_num AS nvarchar) +REPLICATE(''0'', 9-LEN(sm3.channel_num))+ CAST(sm3.channel_num AS varchar)"+Environment.NewLine
  +@"        + ''.wav''"+Environment.NewLine
  +@"        --,RTRIM(sm3.start_time) as start_time"+Environment.NewLine
  +@"        --,sm3.start_time"+Environment.NewLine
-  
-  
+
+  //+ @"    , sm3.p6_value AS [CONNID]" + Environment.NewLine
+  //+ @"	, sm3.local_start_time AS [Local Start Time]" + Environment.NewLine
+  //+ @"	, sm3.local_end_time [Local End Time]" + Environment.NewLine
+  //+ @"	, sm3.PBX_id" + Environment.NewLine
+  //+ @"	, sm3.p2_value AS SRF" + Environment.NewLine
+  //+ @"	, cat.category_name" + Environment.NewLine
+  + "'+@sqlForExcelMetaData_var+'" + Environment.NewLine
+
  +@"from (select * from dbo.Sessions_month_'+@currentMo+@ifMonthChanged+') sm3"+Environment.NewLine
  + "'+@sqlJOINforInstances_var+'" + Environment.NewLine
 
@@ -307,6 +320,7 @@ namespace CopyAutoSchedule
             SqlConnection con = new SqlConnection(connStr);
             SqlCommand cmd = new SqlCommand(sql, con);
             cmd.Parameters.AddWithValue("@CallsForHowManyDaysBack", CallsForHowManyDaysBack);
+            cmd.Parameters.AddWithValue("@sqlForExcelMetaData", sqlForExcelMetaData);//
             cmd.Parameters.AddWithValue("@sqlJOINforInstances", sqlJOINforInstances);
             cmd.Parameters.AddWithValue("@sqlWHEREforInstances",sqlWHEREforInstances);
 
