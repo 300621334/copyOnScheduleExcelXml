@@ -146,7 +146,7 @@ namespace CopyAutoSchedule
             //}
             //return daysSelected;
 
-            return Convert.ToInt32(daysSelected) > 29 ? "29" : daysSelected ;//in production change this to ~7 etc
+            return Convert.ToInt32(daysSelected) > 62 ? "62" : daysSelected ;//in production change this to ~7 etc
         }
 
         private static void trimLogFile()
@@ -303,7 +303,7 @@ namespace CopyAutoSchedule
  + "'+@sqlJOINforInstances_var+'" + Environment.NewLine
 
 
- + @"where sm3.start_time > '''+@oneDayAgo+'''" + Environment.NewLine
+ + @"where sm3.local_start_time > '''+@oneDayAgo+'''" + Environment.NewLine
  + "'+@sqlWHEREforInstances_var + ';'" + Environment.NewLine
   
  +@"exec (@sql);"+Environment.NewLine;
@@ -336,6 +336,10 @@ namespace CopyAutoSchedule
             List<string> metaDataList = new List<string>();
             string colNames = "", metaDataRow="";
             int noOfCols = 0;
+            DateTime now = DateTime.Now;
+            pathListFile = string.Format("pathsList {0:dd-MMM-yyyy}.txt", now);
+            csvFileName = string.Format("metaData {0:dd-MMM-yyyy}.csv", now);
+
 
             try
             {
@@ -350,6 +354,7 @@ namespace CopyAutoSchedule
                 colNames += Environment.NewLine;
                 //colNames = reader.GetName(1) + "," + reader.GetName(2) + "," + reader.GetName(3) + "," + reader.GetName(4) + "," + reader.GetName(5) + "," + (excelNeeded ? reader.GetName(6) : "") + Environment.NewLine;//col Headers
                 metaDataList.Add(colNames);
+                colNames = "";
 
                 while(reader.Read())
                 {
@@ -362,21 +367,26 @@ namespace CopyAutoSchedule
                             metaDataRow += reader.GetValue(i).ToString() + ",";
                         }
                         //metaDataRow = reader.GetValue(1).ToString() + "," + reader.GetValue(2).ToString() + "," + reader.GetValue(3).ToString() + "," + reader.GetValue(4).ToString() + "," + reader.GetValue(5).ToString() + "," + (excelNeeded ? reader.GetValue(6).ToString() : "") + Environment.NewLine;//col Headers
-                        metaDataRow += Environment.NewLine;
+                        //metaDataRow += "\n"; //List<> already provides a newLine when passed to WriteAllLines() so \n or Env.NewLine adds unwanted blank lines
                         metaDataList.Add(metaDataRow);
+                        metaDataRow = ""; //MUST clear this var else resultSet is multiplied many times over into CSV file
+                        File.WriteAllLines(csvFileName, metaDataList, Encoding.UTF8);
                     }
                 }
-                DateTime now = DateTime.Now;
-                pathListFile = string.Format("pathsList {0:dd-MMM-yyyy}.txt", now);
-                csvFileName = string.Format("metaData {0:dd-MMM-yyyy}.csv", now);
+                
+                
                 File.WriteAllLines(pathListFile, pathsList, Encoding.UTF8);
-                File.WriteAllLines(csvFileName, metaDataList, Encoding.UTF8);
+                
                
             }
             catch (Exception e)
             {
                 //Console.WriteLine(e.Message);
                 File.AppendAllText(logFile, "[" + DateTime.Now +"] "+ e.Message + Environment.NewLine);
+            }
+            finally
+            {
+                con.Close();
             }
         }
 
