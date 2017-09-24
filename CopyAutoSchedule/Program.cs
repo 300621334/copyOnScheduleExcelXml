@@ -18,13 +18,13 @@ namespace CopyAutoSchedule
     class Program
     {
         #region Variables
-        static string pathListFile = "";
+        static string pathListFile = "", csvFileName = "";
         static int linesRead = 0, counter = 0, missingFiles = 0, maxLogSizeInKBs = 1, keepCallListsForDays = 7;
         static string logFile="Logs.txt", newFile = "", xmlOriginFile = "", xmlDestinFile = "", folder = "Copied_Files" /*folder = @"\\SE104421\h$\Test"*/
             , FQDN = "SE104499.saimaple.saifg.rbc.com", database = "CentralContact", CallsForHowManyDaysBack = "-1", categoryName="",
-            sqlForExcelMetaData="", sqlJOINforInstances = "", sqlWHEREforInstances = "";
+            addCatColOnlyIfTranscribed="", sqlJOINforInstances = "", sqlWHEREforInstances = "";
         static string[] configTxt;
-        static bool copyXml = true;
+        static bool copyXml = true, excelNeeded = true;
         static List<int> instanceIdsList = new List<int>();
         #endregion
 
@@ -32,7 +32,7 @@ namespace CopyAutoSchedule
         {
             configFile();
             trimLogFile();
-            deletePathLists();
+            deleteOlderPathLists();
             sqlFileCreate();
             string sqlFilePath = Path.Combine(Application.StartupPath, @"sql.sql");
             string sql = File.ReadAllText(sqlFilePath );
@@ -46,17 +46,19 @@ namespace CopyAutoSchedule
         {
             if(!File.Exists("_config.txt"))
             {
-         
+
                 string configFileTxt =
                 "DB Server FQDN: SE104499.saimaple.saifg.rbc.com" + System.Environment.NewLine
-                //+ "Database Name:	CentralContact" + System.Environment.NewLine
+                    //+ "Database Name:	CentralContact" + System.Environment.NewLine
                 + "CallsForHowManyDaysBack: 1" + System.Environment.NewLine
                 + "Destination Folder: Copied_Files" + System.Environment.NewLine
                 + "Want To Copy XML?: no" + System.Environment.NewLine
                 + "Max Log Size (KB): 1000" + System.Environment.NewLine
                 + "Keep pathsLists For Days: 7" + System.Environment.NewLine
+                + "Excel Meta-Data File?: yes" + System.Environment.NewLine
                 + "instance_id comma separated list: 871102,871100" + System.Environment.NewLine
                 + "category_name must contain: credit" + System.Environment.NewLine;
+
 
                 File.WriteAllText("_config.txt", configFileTxt, Encoding.UTF8);
                 Environment.Exit(0);//close app aft creating config.txt template
@@ -106,6 +108,11 @@ namespace CopyAutoSchedule
                     {
                         var match = Regex.Match(line, "[:;]");
                         keepCallListsForDays = Convert.ToInt32( "-" + line.Substring(match.Index + 1).Trim() );
+                    }
+                    if (Regex.Match(line, "Excel Meta-Data File?").Success)
+                    {
+                        var match = Regex.Match(line, "[:;]");
+                        excelNeeded = (line.Substring(match.Index + 1).Trim().ToUpper() == "YES") ? true : false;  //add minus sign so days get substracted
                     }
                     if (Regex.Match(line, "instance_id comma separated list").Success)
                     {
@@ -172,7 +179,7 @@ namespace CopyAutoSchedule
             }
         }
 
-        private static void deletePathLists()
+        private static void deleteOlderPathLists()
         {
             DateTime keepListsTillDate = DateTime.Now.AddDays(keepCallListsForDays);//.AddMinutes(-1);
             string[] pathsListArr = Directory.GetFiles(Directory.GetCurrentDirectory(), "pathsList *.txt");//al files like "pathsList 13-Sep-2017.txt"
@@ -190,7 +197,7 @@ namespace CopyAutoSchedule
             //if at least one instance_id is specified, then add following to SQL query
             if (instanceIdsList.Any())//if list of instance_id is NOT empty, add more to SQL
             {
-                sqlForExcelMetaData = ", sm3.p6_value AS [CONNID] , sm3.local_start_time AS [Local Start Time], sm3.local_end_time [Local End Time], sm3.PBX_id, sm3.p2_value AS SRF, cat.category_name";
+                addCatColOnlyIfTranscribed = " , cat.category_name ";
 
                 sqlJOINforInstances = "JOIN [CentralDWH].[dbo].[Sessions_categories] sc on sc.sid=sm3.sid " //+ Environment.NewLine
                     + " JOIN [CentralDWH].[dbo].[Categories] cat ON sc.category_id=cat.category_id";
@@ -212,13 +219,13 @@ namespace CopyAutoSchedule
  +@"Use CentralDWH;"+Environment.NewLine
  +@"SET NOCOUNT ON;"+Environment.NewLine
 
- + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max), @sqlForExcelMetaData_var nvarchar(max), @sqlJOINforInstances_var nvarchar(max), @sqlWHEREforInstances_var nvarchar(max) ;" + Environment.NewLine
+ + @"declare @now datetime, @sql nvarchar(max), @currentMo nvarchar(2), @ifMonthChanged nvarchar(max), @oneDayAgo nvarchar(max), @addCatColOnlyIfTranscribed_var nvarchar(max), @sqlJOINforInstances_var nvarchar(max), @sqlWHEREforInstances_var nvarchar(max) ;" + Environment.NewLine
  
  + @"--declare @CallsForHowManyDaysBack nvarchar(3) = -45; --if run sql directly in SSMS then use this" + Environment.NewLine
  + @"set @now = GETDATE();" + Environment.NewLine
  +@"set @currentMo = DATEPART(M, @now);"+Environment.NewLine
 
- + @"set @sqlForExcelMetaData_var = @sqlForExcelMetaData;" + Environment.NewLine
+ + @"set @addCatColOnlyIfTranscribed_var = @addCatColOnlyIfTranscribed;" + Environment.NewLine
  + @"set @sqlJOINforInstances_var = @sqlJOINforInstances;" + Environment.NewLine
  + @"set @sqlWHEREforInstances_var = @sqlWHEREforInstances;" + Environment.NewLine
 
@@ -284,13 +291,13 @@ namespace CopyAutoSchedule
  +@"        --,RTRIM(sm3.start_time) as start_time"+Environment.NewLine
  +@"        --,sm3.start_time"+Environment.NewLine
 
-  //+ @"    , sm3.p6_value AS [CONNID]" + Environment.NewLine
-  //+ @"	, sm3.local_start_time AS [Local Start Time]" + Environment.NewLine
-  //+ @"	, sm3.local_end_time [Local End Time]" + Environment.NewLine
-  //+ @"	, sm3.PBX_id" + Environment.NewLine
-  //+ @"	, sm3.p2_value AS SRF" + Environment.NewLine
+  + @"  , sm3.p6_value AS [CONNID]" + Environment.NewLine
+  + @"	, sm3.local_start_time AS [Local Start Time]" + Environment.NewLine
+  + @"	, sm3.local_end_time [Local End Time]" + Environment.NewLine
+  + @"	, sm3.PBX_id" + Environment.NewLine
+  + @"	, sm3.p2_value AS SRF" + Environment.NewLine
   //+ @"	, cat.category_name" + Environment.NewLine
-  + "'+@sqlForExcelMetaData_var+'" + Environment.NewLine
+  + "'+@addCatColOnlyIfTranscribed_var+'" + Environment.NewLine
 
  +@"from (select * from dbo.Sessions_month_'+@currentMo+@ifMonthChanged+') sm3"+Environment.NewLine
  + "'+@sqlJOINforInstances_var+'" + Environment.NewLine
@@ -320,24 +327,50 @@ namespace CopyAutoSchedule
             SqlConnection con = new SqlConnection(connStr);
             SqlCommand cmd = new SqlCommand(sql, con);
             cmd.Parameters.AddWithValue("@CallsForHowManyDaysBack", CallsForHowManyDaysBack);
-            cmd.Parameters.AddWithValue("@sqlForExcelMetaData", sqlForExcelMetaData);//
+            cmd.Parameters.AddWithValue("@addCatColOnlyIfTranscribed", addCatColOnlyIfTranscribed);//
             cmd.Parameters.AddWithValue("@sqlJOINforInstances", sqlJOINforInstances);
             cmd.Parameters.AddWithValue("@sqlWHEREforInstances",sqlWHEREforInstances);
 
             SqlDataReader reader;
             List<string> pathsList = new List<string>();
+            List<string> metaDataList = new List<string>();
+            string colNames = "", metaDataRow="";
+            int noOfCols = 0;
 
             try
             {
                 con.Open();
                 reader = cmd.ExecuteReader();
+                noOfCols = reader.FieldCount;
+
+                for (int i = 1; i < noOfCols; i++)
+                {
+                    colNames += reader.GetName(i) + ","; //https://stackoverflow.com/questions/681653/can-you-get-the-column-names-from-a-sqldatareader
+                }
+                colNames += Environment.NewLine;
+                //colNames = reader.GetName(1) + "," + reader.GetName(2) + "," + reader.GetName(3) + "," + reader.GetName(4) + "," + reader.GetName(5) + "," + (excelNeeded ? reader.GetName(6) : "") + Environment.NewLine;//col Headers
+                metaDataList.Add(colNames);
 
                 while(reader.Read())
                 {
                     pathsList.Add(reader.GetValue(0).ToString());
+                    
+                    if(excelNeeded)
+                    {
+                        for (int i = 1; i < noOfCols; i++)
+                        {
+                            metaDataRow += reader.GetValue(i).ToString() + ",";
+                        }
+                        //metaDataRow = reader.GetValue(1).ToString() + "," + reader.GetValue(2).ToString() + "," + reader.GetValue(3).ToString() + "," + reader.GetValue(4).ToString() + "," + reader.GetValue(5).ToString() + "," + (excelNeeded ? reader.GetValue(6).ToString() : "") + Environment.NewLine;//col Headers
+                        metaDataRow += Environment.NewLine;
+                        metaDataList.Add(metaDataRow);
+                    }
                 }
-                pathListFile = string.Format("pathsList {0:dd-MMM-yyyy}.txt", DateTime.Now);
+                DateTime now = DateTime.Now;
+                pathListFile = string.Format("pathsList {0:dd-MMM-yyyy}.txt", now);
+                csvFileName = string.Format("metaData {0:dd-MMM-yyyy}.csv", now);
                 File.WriteAllLines(pathListFile, pathsList, Encoding.UTF8);
+                File.WriteAllLines(csvFileName, metaDataList, Encoding.UTF8);
                
             }
             catch (Exception e)
